@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  
+</head>
+
+<body>
+  <style>
+    body {
+        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: rgb(128,128,128);
+    }    
+    .value {
+        font-size: 10px;
+        fill: rgb(0, 0, 0);
+        font-weight: lighter;
+    }    
+    p {
+      font-size: 13px;
+      text-align: justify;
+    }
+    li {
+      font-size: 13px;
+      text-align: justify;
+    }
+    .bar:hover{
+          opacity: .6;
+    }
+    .td_especial {
+        font-size: 12px;
+    }
+    .td_header {
+        background-color: rgb(250,250,250);
+        font-size: 14px;   
+    }
+  </style>
+    <h1 align="center">¿Goza Colombia de una estabilidad clim&aacutetica?</h1>
+    <table>
+      <tr>
+        <td align="center" width="50%">
+          <div id="chart">
+            <script>
+              var tabulate = function (data,columns) {              
+                var table = d3.select('#chart')
+                              .append('table')
+                              .style("border-collapse", "collapse")
+                              .style("border", "2px black solid")
+                              .style("align", "center");
+                var thead = table.append('thead')
+                var tbody = table.append('tbody')
+
+                thead.append('tr')
+                     .selectAll('th')
+                     .data(columns)
+                     .enter()
+                     .append('th')
+                     .style("font-size","12px")
+                     .style("padding","2px 4px")
+                     .style("border","1px black solid")
+                     .text(function (d) { return d })
+
+                var rows = tbody.selectAll('tr')
+                                .data(data)
+                                .enter()
+                                .append('tr');
+
+                var cells = rows.selectAll('td')
+                    .data(function(row) {
+                      return columns.map(function (column) {
+                        return { column: column, value: row[column] }
+                      })
+                    })
+                    .enter()
+                    .append('td')
+                    .style("font-family","Courier")
+                    .style("font-size","10px")
+                    .style("padding","2px 4px")
+                    .style("border","1px black dotted")
+                    .text(function (d) { return d.value })
+
+                return table;
+              }
+
+              d3.csv("data.csv", function(error, myData){
+                  if (error) throw error;
+                
+                  myData.sort(function(a,b) {
+                        return d3.ascending(a.Departamento, b.Departamento);
+                  });
+
+                  var columns = ["Departamento"
+                                ,"TemperaturaPromedioMensual"
+                                ,"PrecipitacionPromedioMensual"];
+
+                tabulate(myData,columns);
+              });
+            </script>
+          </div>
+        </td>  
+        <td align="center" width="50%">
+          <h6 align="center">Precipitaciones promedio mensuales por departamento</h6>
+          <div id="chart2">
+            <script>
+              d3.csv("data.csv", function(error, myData){
+                  if (error) throw error;
+
+                  //iterate throught data to convert strings to numbers
+                  myData.forEach(function(d){
+                    d.TemperaturaPromedioMensual = +d.TemperaturaPromedioMensual;
+                    d.PrecipitacionPromedioMensual = +d.PrecipitacionPromedioMensual;
+                    d.PrecipitacionDesviacionEstandar = +d.PrecipitacionDesviacionEstandar;
+                    d.PrecipitacionCoeficienteVariacion = +d.PrecipitacionCoeficienteVariacion;
+                  });
+
+                  myData.sort(function(a,b) {
+                        return d3.ascending(a.Departamento, b.Departamento);
+                  });
+
+                  var width = 600
+                     ,height = 600
+                     ,barH = 20
+                     ,margin = {top: 30, right: 20, bottom: 40, left: 160}
+                     ,widthScale = d3.scaleLinear()
+                                     .range([0, width - margin.left -margin.right])
+                     ,heightScale = d3.scaleBand()
+                                      .range([0, height -margin.top - margin.bottom])
+                                      .padding(0.1)
+                     //,colorScale = d3.scaleOrdinal()
+                     //                .range(d3.schemeCategory20)
+                     ,chart = d3.select("#chart2")
+                                .append("svg")
+                                .attr("width", width)
+                                .attr("height", height)
+                                .append("g")
+                                .attr("transform","translate("+ margin.left+","+margin.top+")")
+                     ,xAxis = chart.append("g").attr("class", "x axis")
+                     ,yAxis = chart.append("g").attr("class", "y axis");
+
+                  widthScale.domain([0, d3.max(myData, function (d) { return d.PrecipitacionPromedioMensual; }) + 10]);
+                  heightScale.domain(myData.map(function (d) { return d.Departamento; }));
+
+                  // Bars - Create
+                  var bars = chart.selectAll(".bar").data(myData);
+                  bars.enter()
+                    .append("rect")
+                    //.attr("fill", "rgb(191, 209, 255)")
+                    .attr("fill", "steelblue")
+                    .attr("class", "bar") // enter
+                    .merge(bars) // enter + update
+                    .attr("x", 0)
+                    .attr("y", function (d)  { return heightScale(d.Departamento); })
+                    .transition().duration(2000)
+                    //.style("fill", function (d, i) { return colorScale(d.Departamento);})
+                    .attr("width", function (d) { return widthScale(d.PrecipitacionPromedioMensual); })
+                    .attr("height", heightScale.bandwidth());
+
+                  // Bars - Remove
+                  bars.exit().remove();
+
+                  xAxis.call(d3.axisTop(widthScale));
+                  yAxis.call(d3.axisLeft(heightScale));
+
+
+                  //select text bar values
+                  var values = chart.selectAll(".value").data(myData);
+                  values.enter()
+                    .append("text")
+                    .attr("class", "value")
+                    .attr("dy", ".95em")
+                    .attr("dx", ".5em")
+                    .transition()
+                    .duration(2000)
+                    .attr("x", function(d){ return widthScale(d.PrecipitacionPromedioMensual);})
+                    .attr("y", function (d)  { return heightScale(d.Departamento); })
+                    .text(function(d){ return d.PrecipitacionPromedioMensual; });
+
+              });
+            </script>
+          </div>          
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <p>Si usted es de aquellas personas que sufre con la din&aacutemica del clima del sitio de Colombia donde viven y no comprende como en las horas de la ma&ntildeana de un d&iacutea cualquiera podemos tener un sol radiante y en las horas de la tarde estar sufrir un terrible aguacero, este estudio puede ayudarlo a determinar cu&aacutel es el departamento de Colombia donde existe menos inestabilidad en cuanto al nivel de lluvias registrado en los &uacuteltimos 30 a&ntildeos.</p>
+          <p>En la imagen superior de la pantalla podr&aacute encontrar una tabla y una gr&aacutefica donde se puede identificar la temperatura y el nivel de las precipitaciones promedio por departamento obtenidas a partir de mediciones mensuales realizadas en los últimos 30 a&ntildeos en 450 municipios de nuestro país. La temperatura esta medida en grados cent&iacutegrados y el nivel de precipitaciones pluvial en mm. Este &uacutetimo indicador, el de las precipitaciones pluviales, hace referencia al espesor de la l&aacutemina de agua que se forma a causa de las lluvias registradas sobre una superficie plana e impermeable y que equivale a litros de agua por metro cuadrado de terreno (l/m2).</p>
+          <p>Por medio de la observación de esta informaci&oacuten se pueden obtener f&aacutecilmente las siguientes conclusiones:
+            <ul type="circle">
+              <li>El departamento con la temperatura promedio por municipio m&aacutes alta de Colombia en los &uacuteltimos 30 a&ntildeos es el Cesar</li>
+              <li>El departamento con la temperatura promedio por municipio m&aacutes baja de Colombia en los &uacuteltimos 30 a&ntildeos es el Distrito Capital seguido de Boyac&aacute</li>
+              <li>El departamento con el promedio mensual de lluvias por municipio m&aacutes alta de Colombia en los &uacuteltimos 30 a&ntildeos es el Choc&oacute</li>
+              <li>El departamento con el promedio mensual de lluvias por municipio m&aacutes bajo de Colombia en los &uacuteltimos 30 a&ntildeos es La Guajira</li>
+            </ul>
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" width="50%">
+          <h6 align="center">Correlaci&oacuten entre la temperatura y el nivel de precipitaciones</h6>
+          <div id="chart3">
+            <script>
+              d3.csv("data.csv", function(error, myData){
+                if (error) throw error;
+
+                myData.forEach(function(d){
+                  d.TemperaturaPromedioMensual = +d.TemperaturaPromedioMensual;
+                  d.PrecipitacionPromedioMensual = +d.PrecipitacionPromedioMensual;
+                });
+
+                var width = 400
+                   ,height = 400
+                   ,barH = 20
+                   ,margin = {top: 30, right: 20, bottom: 40, left: 40}
+                   ,widthScale = d3.scaleLinear().range([0,width-margin.left-margin.right])
+                   ,heightScale = d3.scaleLinear().range([height-margin.top-margin.bottom,0])
+                   //,colorScale = d3.scaleOrdinal().range(d3.schemeCategory20)
+                   ,chart = d3.select("#chart3")
+                              .append("svg")
+                              .attr("width", width)
+                              .attr("height", height)
+                              .append("g")
+                              .attr("transform","translate("+ margin.left+","+margin.top+")")
+                   ,xAxis = chart.append("g")
+                                 .attr("class", "x axis")
+                                 .attr("transform","translate(" + margin.left + ","+(width-margin.top-margin.bottom)+")")
+                   ,yAxis = chart.append("g")
+                                 .attr("class", "y axis")
+                                 .attr("transform","translate(" + margin.left + ",0)");
+                
+                widthScale.domain([0, d3.max(myData, function (d) { return d.TemperaturaPromedioMensual; })]);                        
+                heightScale.domain([0, d3.max(myData, function (d) { return d.PrecipitacionPromedioMensual; })]);                       
+
+                var dots = chart.selectAll(".dot").data(myData);
+                dots.enter()
+                    .append("circle")
+                    .attr("class", "dot")
+                    .attr("r", 3.5)
+                    .attr("cx",function(d){return widthScale(d.TemperaturaPromedioMensual); })
+                    .attr("cy",function(d){return heightScale(d.PrecipitacionPromedioMensual);})
+                    .attr("fill", "rgb(255, 0, 0)");
+                
+                xAxis.call(d3.axisBottom(widthScale));
+                yAxis.call(d3.axisLeft(heightScale));
+
+                chart.append("text")  
+                     .attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
+                     .attr("x", -100)
+                     .attr("y",  0)
+                     .attr("transform", "rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+                     .text("Precipitaciones")
+                     .style("font-size","10px");
+
+                chart.append("text")  
+                     .attr("text-anchor", "middle")
+                     .attr("x", width/2)
+                     .attr("y", height-margin.bottom)
+                     .text("Temperatura")
+                     .style("font-size","10px");
+
+              });
+            </script> 
+          </div>
+        </td>      
+        <td valign="middle" width="50%">
+          <p>Ahora bien, con el &aacutenimo de contestar nuestra pregunta, calculamos el coeficiente de correlación entre la temperatura y el nivel de lluvias y comprobamos que no existe ninguna relaci&oacuten fuerte entre la temperatura y el nivel de precipitaciones promedio en los &uacuteltimos 30 a&ntildeos. El resultado arroja un coeficiente de correlaci&oacuten del 24.3%, lo cual es insuficiente para admitir una relací&oacuten entre estas variables. La raz&oacuten de este valor se cimenta en que el nivel de precipitaciones depende no solamente de la temperatura de la zona sino tambi&eacuten de factores como:
+          </p>
+          <ul type="center">
+            <li>La altitud, es decir la distancia de un punto respecto al nivel del mar.</li>
+            <li>La latitud, es decir la inclinaci&oacuten del eje terrestre y movimiento de traslaci&oacuten de la Tierra que influye directamente en c&oacutemo llegan los rayos del Sol a una zona.</li>
+          </ul>
+        </td>        
+      </tr>
+      <tr>
+        <td valign="middle" width="50%">
+          <p>En Colombia, la temperatura promedio no presenta una variaci&oacuten significativa en los &uacuteltimos 30 an&tildeos. Sin embargo, al calcular el coeficiente de variaci&oacuten de los n&iacuteveles de precipitaci&oacuten al interior de nuestros departamentos si es posible encontrar diferencias significativas que nos permiten determinar, que tan frecuentemente se presentan situaciones en las que en municipios que pertenecen a un mismo departamento este lloviendo o no al mismo tiempo.  Los resultados se muestran en la gr&aacutefica de la derecha agrupados en tres franjas: aquellos que tienen una variaci&oacuten del nivel de lluvias alto en sus municipios, aquellos con una variaci&oacuten media y aquellos con una una variaci&oacuten baja.</p>
+          <p>Al combinar estos datos con la informací&oacuten de precipitaciones promedio podemos determinar cu&aacuteles son los departamentos con niveles de lluvias similares o diferentes en todos sus municpios, de acuerdo al porcentaje de variabilidad de &eacutestas.</p>
+          <br>
+          <table align="center" style="padding: 1px 4px; text-align: center;"">
+            <tr>
+              <td></td>
+              <td></td>
+              <th class="td_header" colspan="3">Nivel de precipitaci&oacuten <br>(¿Qu&eacute tanto llueve?)</th>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <th class="td_header">Alto</th>
+              <th class="td_header">Medio</th>
+              <th class="td_header">Bajo</th>
+            </tr>
+            <tr>
+              <th class="td_header" rowspan="4">Uniformidad en el nivel<br>de precipitaciones<br>(Que tan estable?)</th>
+              <th class="td_header">Alta</th>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Guain&iacutea</td></tr>
+                    <tr><td class="td_especial">Vichada</td></tr>
+                    <tr><td class="td_especial">Casanare</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Arauca</td></tr>
+                    <tr><td class="td_especial">San Andr&eacutes Providencia y Sta C</td></tr>
+                    <tr><td class="td_especial">Bol&iacutevar</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">La Guajira</td></tr>
+                    <tr><td class="td_especial">Atl&aacutentico</td></tr>
+                    <tr><td class="td_especial">Cesar</td></tr>
+                 </table>
+              </td>
+            </tr>
+            <tr>
+              <th class="td_header">Media</th>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Caquet&aacute</td></tr>
+                    <tr><td class="td_especial">Meta</td></tr>
+                    <tr><td class="td_especial">Guaviare</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Quind&iacuteo</td></tr>
+                    <tr><td class="td_especial">Santander</td></tr>
+                    <tr><td class="td_especial">Tolima</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Bogot&aacute D.C.</td></tr>
+                    <tr><td class="td_especial">Huila</td></tr>
+                    <tr><td class="td_especial">Boyac&aacute</td></tr>
+                 </table>
+              </td>
+            </tr>
+            <tr>
+              <th class="td_header">Baja</th>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Choc&oacute</td></tr>
+                    <tr><td class="td_especial">Amazonas</td></tr>
+                    <tr><td class="td_especial">Putumayo</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">
+                 <table align="center">
+                    <tr><td class="td_especial">Valle del Cauca</td></tr>
+                    <tr><td class="td_especial">Cauca</td></tr>
+                    <tr><td class="td_especial">Nari&ntildeo</td></tr>
+                 </table>
+              </td>
+              <td class="td_especial">No existe</td>
+            </tr>
+          </table>
+        </td>
+        <td align="center" width="50%">
+          <h6 align="center">Coeficiente de variación del nivel de precipitaciones por departamentos</h6>
+            <div id="chart4">
+            <script>
+              d3.csv("data.csv", function(error, myData){
+                if (error) throw error;
+
+                myData.forEach(function(d){
+                  d.PrecipitacionCoeficienteVariacion = +d.PrecipitacionCoeficienteVariacion;
+                });
+
+                myData.sort(function(a,b) {
+                  return d3.ascending(a.PrecipitacionCoeficienteVariacion, b.PrecipitacionCoeficienteVariacion);
+                });
+
+                var width = 600
+                   ,height = 400
+                   ,barH = 20
+                   ,margin = {top: 30, right: 20, bottom: 180, left: 40}
+                   ,widthScale = d3.scaleBand().rangeRound([0, width - margin.left - margin.right]).padding(0.1)
+                   ,heightScale = d3.scaleLinear().rangeRound([height - margin.top - margin.bottom, 0])
+                   ,chart = d3.select("#chart4")
+                              .append("svg")
+                              .attr("width", width)
+                              .attr("height", height)
+                              .append("g")
+                              .attr("transform","translate("+ margin.left+","+margin.top+")")
+                   ,xAxis = chart.append("g")
+                                 .attr("class", "x axis")
+                                 .attr("transform","translate(0,"+(height-margin.top-margin.bottom)+")")                      
+                   ,yAxis = chart.append("g")
+                                 .attr("class", "y axis")
+                   ,labels = ["Bajo", "Medio", "Alto"]
+                   ,color = ["steelblue", "orangered", "orange"];
+                  
+                widthScale.domain(myData.map(function(d) { return d.Departamento; }));
+                heightScale.domain([0, d3.max(myData, function(d) { return d.PrecipitacionCoeficienteVariacion; })]);
+                  
+                  
+                xAxis.call(d3.axisBottom(widthScale))
+                     .selectAll("text")
+                     .style("text-anchor", "end")
+                     .attr("dx", "-.8em")
+                     .attr("dy", ".15em")
+                     .attr("transform", "rotate(-65)");
+                yAxis.call(d3.axisLeft(heightScale));
+                  
+                var bars = chart.selectAll(".bar").data(myData);
+                bars.enter()
+                    .append("rect")
+                    //.attr("fill", "rgb(191, 209, 255)")
+                    .attr("fill", function(d) {
+                                    if (d.PrecipitacionCoeficienteVariacion < 30) {
+                                      return color[0];
+                                    } else if(d.PrecipitacionCoeficienteVariacion < 53) {
+                                      return color[1];
+                                    } else {
+                                      return color[2];
+                                    }
+                                  })                    
+                    .attr("class", "bar") // enter
+                    .merge(bars) // enter + update
+                    .attr("x", function(d) { return widthScale(d.Departamento);})
+                    .attr("y", function (d)  { return heightScale(d.PrecipitacionCoeficienteVariacion); })
+                    .transition().duration(2000)
+                    .attr("height", function (d) { return height - margin.top - margin.bottom - heightScale(d.PrecipitacionCoeficienteVariacion); })
+                    .attr("width", widthScale.bandwidth());
+
+                bars.exit().remove();
+
+                var values = chart.selectAll(".value").data(myData);
+                values.enter()
+                      .append("text")
+                      .attr("class", "value")
+                      .attr("dy", ".95em")
+                      .attr("dx", ".5em")
+                      .transition()
+                      .duration(2000)
+                      .attr("x", function(d){ return widthScale(d.Departamento);})
+                      .attr("y", function (d)  { return heightScale(d.PrecipitacionCoeficienteVariacion) - barH; })
+                      .text(function(d){ return d.PrecipitacionCoeficienteVariacion; })
+                      .attr("text-anchor", "middle");
+
+                var legend = chart.selectAll(".legend").data(labels);
+                legend.enter()
+                      .append("rect")
+                      .attr("width", 20)
+                      .attr("height", 20)
+                      .attr("fill", function (d, i) { return color[i]; })
+                      .transition()
+                      .duration(2000)
+                      .attr("y", function (d, i) { return i * 20; })
+                      .attr("x", 30);
+                legend.enter()
+                      .append("text")
+                      .attr("class", "value")
+                      .transition()
+                      .duration(2000)
+                      .attr("y", function (d, i) { return i * 20 + 15; })
+                      .attr("x", 60)
+                      .attr("text-anchor", "start")
+                      .text(function (d, i) { return labels[i]; });
+              }); 
+            </script>
+          </div>   
+        </td>
+      </tr>
+    </table>
+    <p align="center" style="font-size: 11px; text-align: center;">
+      Arturo Enrique Polo Pe&ntildea<br>
+      C&oacutedigo: 201322899<br>
+      Universidad de los Andes<br>
+      Maestr&iacutea en Ingenier&iacutea de la Informaci&oacuten<br>
+      MINE 4202 - Visual Analytics
+    </p>
+  </div>
+</body>
