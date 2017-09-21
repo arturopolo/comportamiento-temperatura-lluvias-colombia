@@ -2,6 +2,10 @@
 <head>
   <meta charset="utf-8">
   <script src="https://d3js.org/d3.v4.min.js"></script>
+  <!--Code review - Franklyn Moreano
+  Puedes agregar infromacion de autor descripción y palabras clave al sitio para mejorar la busqueda y descripcion de tu pagina-->
+  <meta name="description" content="Estabilidad climatica en Colombia">
+  <meta name="keywords" content="Clima, Colombia, precipitacion, temperatura">
   
 </head>
 
@@ -39,7 +43,9 @@
     <table>
       <tr>
         <td align="center" width="50%">
-          <div id="chart">
+          <div id="chart">            
+            <!-- Code review - Franklyn Moreano
+            Es interesante como construyes la tabla de datos-->
             <script>
               var tabulate = function (data,columns) {              
                 var table = d3.select('#chart')
@@ -113,8 +119,13 @@
                     d.PrecipitacionCoeficienteVariacion = +d.PrecipitacionCoeficienteVariacion;
                   });
 
+                  /*
+                  Code Rewiew - Franklyn Moreano 
+                  Podrias ordenarlo por la variable PrecipitacionPromedioMensual teniendo en cuenta que en tu insight mencionas los mas altos  y los mas bajos. Esto ayudaria a visualizar mejor el insight que propones                      
+                  */
                   myData.sort(function(a,b) {
-                        return d3.ascending(a.Departamento, b.Departamento);
+                        return d3.descending(a.PrecipitacionPromedioMensual, b.PrecipitacionPromedioMensual);
+                        //return d3.ascending(a.Departamento, b.Departamento);
                   });
 
                   var width = 600
